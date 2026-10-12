@@ -3021,7 +3021,8 @@ int versionCmp(String v1, String v2) {
 }
 
 String getWindowName({WindowType? overrideType}) {
-  final name = bind.mainGetAppNameSync();
+  // Nelia Assistenza Remota: nel titolo il nome si legge con gli spazi.
+  final name = bind.mainGetAppNameSync().replaceAll('-', ' ');
   switch (overrideType ?? kWindowType) {
     case WindowType.Main:
       return name;
