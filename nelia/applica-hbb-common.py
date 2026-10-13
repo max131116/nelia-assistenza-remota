@@ -22,3 +22,43 @@ for vecchio, nuovo in cambi:
     testo = testo.replace(vecchio, nuovo)
 file.write_text(testo, encoding="utf-8")
 print(f"{file}: nome {NOME}, server {SERVER}, chiave del nostro server")
+
+# Password fissa: quella che si vede nel programma resta la stessa a ogni avvio
+# (salvata nelle impostazioni). Cambia solo col tasto «Aggiorna password» o dopo
+# troppi tentativi sbagliati. Lunga 10 caratteri se il cliente non sceglie altro.
+file = pathlib.Path("libs/hbb_common/src/password_security.rs")
+testo = file.read_text(encoding="utf-8")
+cambi = [
+    (
+        "Arc::new(RwLock::new(get_auto_password()));",
+        "Arc::new(RwLock::new(password_salvata()));",
+    ),
+    (
+        "// Should only be called in server\npub fn update_temporary_password() {\n    *TEMPORARY_PASSWORD.write().unwrap() = get_auto_password();\n}",
+        "// Nelia: password fissa per questo computer, salvata nelle impostazioni.\n"
+        "const NELIA_PASSWORD_FISSA: &str = \"nelia-password-fissa\";\n\n"
+        "fn password_salvata() -> String {\n"
+        "    let salvata = Config::get_option(NELIA_PASSWORD_FISSA);\n"
+        "    if !salvata.is_empty() {\n"
+        "        return salvata;\n"
+        "    }\n"
+        "    nuova_password_salvata()\n"
+        "}\n\n"
+        "fn nuova_password_salvata() -> String {\n"
+        "    let nuova = get_auto_password();\n"
+        "    Config::set_option(NELIA_PASSWORD_FISSA.to_owned(), nuova.clone());\n"
+        "    nuova\n"
+        "}\n\n"
+        "// Should only be called in server\npub fn update_temporary_password() {\n    *TEMPORARY_PASSWORD.write().unwrap() = nuova_password_salvata();\n}",
+    ),
+    (
+        "    } else if length == \"10\" {\n        10\n    } else {\n        6 // default\n    }",
+        "    } else if length == \"6\" {\n        6\n    } else {\n        10 // Nelia: default 10\n    }",
+    ),
+]
+for vecchio, nuovo in cambi:
+    if testo.count(vecchio) != 1:
+        sys.exit(f"Riga non trovata (o piu' volte) in {file}: {vecchio}")
+    testo = testo.replace(vecchio, nuovo)
+file.write_text(testo, encoding="utf-8")
+print(f"{file}: password fissa, lunga 10")

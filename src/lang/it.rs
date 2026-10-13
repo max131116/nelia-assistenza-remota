@@ -390,7 +390,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Accept sessions via click", "Accetta sessioni via clic"),
         ("Accept sessions via both", "Accetta sessioni con entrambe le password"),
         ("Please wait for the remote side to accept your session request...", "Attendi che il dispositivo remoto accetti la richiesta di sessione..."),
-        ("One-time Password", "Password monouso"),
+        ("One-time Password", "Password"),
         ("Use one-time password", "Usa password monouso"),
         ("One-time password length", "Lunghezza password monouso"),
         ("Request access to your device", "Richiedi accesso al dispositivo"),
