@@ -43,6 +43,8 @@ jobs:
 
       - name: Nelia - nome, server e chiave
         shell: bash
+        env:
+          NELIA_PASSWORD: ${{ secrets.NELIA_PASSWORD }}
         run: python3 nelia/applica-hbb-common.py
 
       - name: Restore bridge files
@@ -189,6 +191,8 @@ jobs:
           submodules: recursive
 
       - name: Nelia - nome, server e chiave
+        env:
+          NELIA_PASSWORD: ${{ secrets.NELIA_PASSWORD }}
         run: python3 nelia/applica-hbb-common.py
 
       - name: Install build runtime

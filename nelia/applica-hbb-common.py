@@ -2,6 +2,9 @@
 # Nelia Assistenza Remota: nome, server e chiave scritti dentro il programma.
 # libs/hbb_common e' un sottomodulo di RustDesk: lo si modifica qui, durante la
 # costruzione, invece di copiarlo. Se una riga non si trova, la costruzione si ferma.
+import base64
+import hashlib
+import os
 import pathlib
 import sys
 
@@ -62,3 +65,30 @@ for vecchio, nuovo in cambi:
     testo = testo.replace(vecchio, nuovo)
 file.write_text(testo, encoding="utf-8")
 print(f"{file}: password fissa, lunga 10")
+
+# Password preimpostata (16/10/2026): uguale su tutti i computer, cosi' si entra
+# senza farsi dire nessuna password dal cliente. Arriva dal Secret NELIA_PASSWORD
+# di GitHub (non e' scritta nel codice) e nel programma finisce solo la sua
+# impronta (sha256 con il sale fisso), come fa RustDesk con le password preimpostate.
+# La password del singolo computer (sopra) continua a funzionare.
+# Per tornare indietro: ANNULLA PASSWORD NELIA2026.
+PASSWORD = os.environ.get("NELIA_PASSWORD", "")
+if not PASSWORD:
+    sys.exit("Manca il Secret NELIA_PASSWORD su GitHub: il programma non viene costruito senza password.")
+SALE = "nelia-assistenza-remota"
+impronta = "00" + base64.b64encode(hashlib.sha256((PASSWORD + SALE).encode("utf-8")).digest()).decode("ascii")
+
+file = pathlib.Path("libs/hbb_common/src/config.rs")
+testo = file.read_text(encoding="utf-8")
+vecchio = "    pub static ref HARD_SETTINGS: RwLock<HashMap<String, String>> = Default::default();"
+nuovo = (
+    "    pub static ref HARD_SETTINGS: RwLock<HashMap<String, String>> = RwLock::new(HashMap::from([\n"
+    f"        (\"password\".to_owned(), \"{impronta}\".to_owned()),\n"
+    f"        (\"salt\".to_owned(), \"{SALE}\".to_owned()),\n"
+    "    ]));"
+)
+if testo.count(vecchio) != 1:
+    sys.exit(f"Riga non trovata (o piu' volte) in {file}: {vecchio}")
+testo = testo.replace(vecchio, nuovo)
+file.write_text(testo, encoding="utf-8")
+print(f"{file}: password preimpostata (solo impronta)")
