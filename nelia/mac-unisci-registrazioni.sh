@@ -8,7 +8,8 @@
 # registra, e' fermo da 10 secondi; senza audio: video fermo da 60 secondi):
 #   - cerca l'audio della stessa registrazione (stesso computer, iniziato
 #     entro 2 minuti dal video) e lo mette a tempo col video;
-#   - crea «<nome del computer> <AAAA-MM-GG hh.mm>.mp4» nella stessa cartella.
+#   - crea «<nome del computer> <AAAA-MM-GG hh.mm>.mp4» sulla Scrivania, nella
+#     cartella «Registrazioni lezioni» (se non si puo', nella stessa cartella).
 # Gli originali (.webm e .wav) restano. Un video gia' fatto non si rifa'
 # (elenco in .unite). Per tornare indietro: ANNULLA REGISTRA AUDIO.
 # Quando un .mp4 e' pronto scrive il suo percorso in .pronti/<id>: l'app lo
@@ -22,6 +23,7 @@ PEERS="${NELIA_PEERS:-$HOME/Library/Preferences/com.carriez.Nelia-Assistenza-Rem
 FFMPEG="${NELIA_FFMPEG:-$HOME/.local/bin/ffmpeg}"
 FFPROBE="${NELIA_FFPROBE:-$HOME/.local/bin/ffprobe}"
 FATTE="$CARTELLA/.unite"
+USCITE="${NELIA_USCITE:-$HOME/Desktop/Registrazioni lezioni}"
 ATTESA="${NELIA_ATTESA:-60}"
 ATTESA_AUDIO="${NELIA_ATTESA_AUDIO:-10}"
 
@@ -82,7 +84,9 @@ for video in "$CARTELLA"/outgoing_*_display*.webm; do
   schermo=$(echo "$nome" | sed -E 's/.*_display([0-9]+)_.*/\1/')
   extra=""
   [ "$schermo" != "0" ] && extra=" schermo $((schermo + 1))"
-  uscita="$CARTELLA/$alias $quando$extra.mp4"
+  dove="$CARTELLA"
+  mkdir -p "$USCITE" 2>/dev/null && [ -w "$USCITE" ] && dove="$USCITE"
+  uscita="$dove/$alias $quando$extra.mp4"
   temp="$CARTELLA/.in-corso-$$.mp4"
 
   # Video: H.264 (si apre ovunque), mai piu' largo di 1920, fotogrammi solo
@@ -105,7 +109,10 @@ for video in "$CARTELLA"/outgoing_*_display*.webm; do
       -c:v libx264 -preset medium -crf 26 -pix_fmt yuv420p -movflags +faststart "$temp"
   fi
   if [ $? -eq 0 ] && [ -s "$temp" ]; then
-    mv -f "$temp" "$uscita"
+    if ! mv -f "$temp" "$uscita" 2>/dev/null; then
+      uscita="$CARTELLA/$(basename "$uscita")"
+      mv -f "$temp" "$uscita"
+    fi
     echo "$nome" >> "$FATTE"
     mkdir -p "$CARTELLA/.pronti"
     printf '%s' "$uscita" > "$CARTELLA/.pronti/.$id.tmp" && mv -f "$CARTELLA/.pronti/.$id.tmp" "$CARTELLA/.pronti/$id"

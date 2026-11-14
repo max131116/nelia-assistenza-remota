@@ -5,7 +5,7 @@
 // 2. Aspetta che l'automazione scriva .pronti/<id> con il percorso dell'.mp4,
 //    lascia .pronti/<id>.invia e apre il Trasferimento file.
 // 3. La finestra del Trasferimento file trova .pronti/<id>.invia, lo toglie
-//    e manda l'.mp4 sulla Scrivania del cliente, in «Registrazioni Nelia».
+//    e manda l'.mp4 sulla Scrivania del cliente, in «Registrazioni lezioni».
 // Per tornare indietro: ANNULLA MANDA REGISTRAZIONE.
 
 import 'dart:async';
@@ -18,7 +18,7 @@ import 'file_model.dart';
 import 'model.dart';
 import 'platform_model.dart';
 
-const _kCartellaCliente = 'Registrazioni Nelia';
+const _kCartellaCliente = 'Registrazioni lezioni';
 const _kAttesaMassima = Duration(minutes: 30);
 
 Directory _pronti() =>
