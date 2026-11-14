@@ -102,6 +102,7 @@ mod audio_state_tests;
 pub mod file_trait;
 pub mod helper;
 pub mod io_loop;
+pub mod nelia_registra_audio;
 pub mod screenshot;
 
 pub const MILLI1: Duration = Duration::from_millis(1);
@@ -2668,6 +2669,7 @@ pub struct VideoHandler {
     _display: usize, // useful for debug
     fail_counter: usize,
     first_frame: bool,
+    nelia_audio: Option<nelia_registra_audio::Guardia>,
 }
 
 impl VideoHandler {
@@ -2700,6 +2702,7 @@ impl VideoHandler {
             _display,
             fail_counter: 0,
             first_frame: true,
+            nelia_audio: None,
         }
     }
 
@@ -2775,6 +2778,13 @@ impl VideoHandler {
     /// Start or stop screen record.
     pub fn record_screen(&mut self, start: bool, id: String, display_idx: usize, camera: bool) {
         self.record = false;
+        self.nelia_audio = None;
+        if start {
+            self.nelia_audio = Some(nelia_registra_audio::inizia(
+                &id,
+                &crate::ui_interface::video_save_directory(false),
+            ));
+        }
         if start {
             self.recorder = Recorder::new(RecorderContext {
                 server: false,
@@ -4166,6 +4176,7 @@ pub fn start_audio_thread() -> MediaSender {
             if let Ok(data) = received {
                 match data {
                     MediaData::AudioFrame(af) => {
+                        nelia_registra_audio::audio_remoto(&af.data);
                         audio_handler.handle_frame(*af);
                     }
                     MediaData::AudioFormat(f) => {

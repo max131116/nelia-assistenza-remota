@@ -601,6 +601,7 @@ impl<T: InvokeUiSession> Remote<T> {
                     match rx_audio_data.try_recv() {
                         Ok((_instant, msg)) => match &msg.union {
                             Some(message::Union::AudioFrame(frame)) => {
+                                crate::client::nelia_registra_audio::audio_mio(&frame.data);
                                 let mut msg = Message::new();
                                 msg.set_audio_frame(frame.clone());
                                 tx_audio.send(Data::Message(msg)).ok();
