@@ -1214,6 +1214,14 @@ pub fn main_get_local_option(key: String) -> SyncReturn<String> {
     SyncReturn(get_local_option(key))
 }
 
+pub fn main_nelia_microfono(spento: bool) {
+    crate::client::nelia_microfono::imposta(spento);
+}
+
+pub fn main_nelia_microfono_spento() -> SyncReturn<bool> {
+    SyncReturn(crate::client::nelia_microfono::spento())
+}
+
 pub fn main_get_use_texture_render() -> SyncReturn<bool> {
     SyncReturn(use_texture_render())
 }

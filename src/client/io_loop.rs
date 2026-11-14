@@ -567,6 +567,7 @@ impl<T: InvokeUiSession> Remote<T> {
             // But it' not necessary for now, because it's not a common case.
             // And it is immediately known when the input device is changed.
             crate::audio_service::set_voice_call_input_device(get_default_sound_input(), false);
+            crate::client::nelia_microfono::imposta(false);
             // Create a channel to receive error or closed message
             let (tx, rx) = std::sync::mpsc::channel();
             let (tx_audio_data, mut rx_audio_data) =
@@ -594,13 +595,16 @@ impl<T: InvokeUiSession> Remote<T> {
                                 false,
                             );
                             crate::audio_service::set_voice_call_input_device(None, true);
+                            crate::client::nelia_microfono::imposta(false);
                             break;
                         }
                         _ => {}
                     }
                     match rx_audio_data.try_recv() {
                         Ok((_instant, msg)) => match &msg.union {
-                            Some(message::Union::AudioFrame(frame)) => {
+                            Some(message::Union::AudioFrame(frame))
+                                if !crate::client::nelia_microfono::spento() =>
+                            {
                                 crate::client::nelia_registra_audio::audio_mio(&frame.data);
                                 let mut msg = Message::new();
                                 msg.set_audio_frame(frame.clone());

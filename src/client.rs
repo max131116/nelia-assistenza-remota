@@ -102,6 +102,7 @@ mod audio_state_tests;
 pub mod file_trait;
 pub mod helper;
 pub mod io_loop;
+pub mod nelia_microfono;
 pub mod nelia_registra_audio;
 pub mod screenshot;
 
