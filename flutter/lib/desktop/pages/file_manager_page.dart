@@ -24,6 +24,7 @@ import '../../consts.dart';
 import '../../desktop/widgets/material_mod_popup_menu.dart' as mod_menu;
 import '../../common.dart';
 import '../../models/model.dart';
+import '../../models/nelia_invia_registrazione.dart';
 import '../../models/platform_model.dart';
 import '../widgets/popup_menu.dart';
 
@@ -112,6 +113,7 @@ class _FileManagerPageState extends State<FileManagerPage>
       _ffi.ffiModel.updateEventListener(_ffi.sessionId, widget.id);
     }
     debugPrint("File manager page init success with id ${widget.id}");
+    unawaited(neliaInviaSePronta(_ffi, widget.id));
     _ffi.dialogManager.setOverlayState(_overlayKeyState);
     // Call onSelected in post frame callback, since we cannot guarantee that the callback will not call setState.
     WidgetsBinding.instance.addPostFrameCallback((_) {

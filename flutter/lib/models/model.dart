@@ -41,6 +41,7 @@ import '../common.dart';
 import '../utils/image.dart' as img;
 import '../common/widgets/dialog.dart';
 import 'input_model.dart';
+import 'nelia_invia_registrazione.dart';
 import 'platform_model.dart';
 import 'package:flutter_hbb/utils/scale.dart';
 
@@ -3988,6 +3989,7 @@ class RecordingModel with ChangeNotifier {
       await sessionRefreshVideo(sessionId, pi);
     }
     await bind.sessionRecordScreen(sessionId: sessionId, start: value);
+    if (!value) unawaited(neliaDopoRec(parent.target));
   }
 
   updateStatus(bool status) {

@@ -3,13 +3,16 @@
 # che si apre con un doppio clic, con la voce della «Chiamata vocale».
 #
 # Gira da solo sul Mac (LaunchAgent it.mynelia.unisci-registrazioni): guarda
-# la cartella delle registrazioni e, per ogni video .webm finito (fermo da
-# almeno 60 secondi) che non ha ancora il suo .mp4:
+# la cartella delle registrazioni e, per ogni video .webm finito che non ha
+# ancora il suo .mp4 (finito = il suo audio, riscritto ogni 200 ms mentre si
+# registra, e' fermo da 10 secondi; senza audio: video fermo da 60 secondi):
 #   - cerca l'audio della stessa registrazione (stesso computer, iniziato
 #     entro 2 minuti dal video) e lo mette a tempo col video;
 #   - crea «<nome del computer> <AAAA-MM-GG hh.mm>.mp4» nella stessa cartella.
 # Gli originali (.webm e .wav) restano. Un video gia' fatto non si rifa'
 # (elenco in .unite). Per tornare indietro: ANNULLA REGISTRA AUDIO.
+# Quando un .mp4 e' pronto scrive il suo percorso in .pronti/<id>: l'app lo
+# legge per mandarlo al cliente (ANNULLA MANDA REGISTRAZIONE).
 
 set -u
 # Numeri sempre col punto (col Mac in italiano printf e bc userebbero la virgola).
@@ -20,6 +23,7 @@ FFMPEG="${NELIA_FFMPEG:-$HOME/.local/bin/ffmpeg}"
 FFPROBE="${NELIA_FFPROBE:-$HOME/.local/bin/ffprobe}"
 FATTE="$CARTELLA/.unite"
 ATTESA="${NELIA_ATTESA:-60}"
+ATTESA_AUDIO="${NELIA_ATTESA_AUDIO:-10}"
 
 [ -d "$CARTELLA" ] || exit 0
 [ -x "$FFMPEG" ] || { echo "ffmpeg mancante: $FFMPEG"; exit 1; }
@@ -41,7 +45,8 @@ for video in "$CARTELLA"/outgoing_*_display*.webm; do
   nome=$(basename "$video")
   grep -qxF "$nome" "$FATTE" && continue
   # ancora in scrittura?
-  [ $(( adesso - $(stat -f %m "$video") )) -ge "$ATTESA" ] || continue
+  eta_video=$(( adesso - $(stat -f %m "$video") ))
+  [ "$eta_video" -ge "$ATTESA_AUDIO" ] || continue
 
   # outgoing_<id>_<tempo>_display<n>_<codec>.webm
   resto="${nome#outgoing_}"
@@ -55,7 +60,7 @@ for video in "$CARTELLA"/outgoing_*_display*.webm; do
   meglio=999999
   for a in "$CARTELLA"/outgoing_"$id"_*_audio.wav; do
     [ -f "$a" ] || continue
-    [ $(( adesso - $(stat -f %m "$a") )) -ge "$ATTESA" ] || continue 2
+    [ $(( adesso - $(stat -f %m "$a") )) -ge "$ATTESA_AUDIO" ] || continue 2
     ta=$(basename "$a" | sed -E 's/^.*_([0-9]{17})_audio\.wav$/\1/')
     t_audio=$(secondi "$ta") || continue
     d=$(echo "$t_video - $t_audio" | bc)
@@ -66,6 +71,7 @@ for video in "$CARTELLA"/outgoing_*_display*.webm; do
       sposta=$(printf "%.3f" "$d")
     fi
   done
+  [ -n "$audio" ] || [ "$eta_video" -ge "$ATTESA" ] || continue
 
   # Il nome: il nome del computer (dalla rubrica del programma) e l'ora.
   alias=""
@@ -101,6 +107,8 @@ for video in "$CARTELLA"/outgoing_*_display*.webm; do
   if [ $? -eq 0 ] && [ -s "$temp" ]; then
     mv -f "$temp" "$uscita"
     echo "$nome" >> "$FATTE"
+    mkdir -p "$CARTELLA/.pronti"
+    printf '%s' "$uscita" > "$CARTELLA/.pronti/.$id.tmp" && mv -f "$CARTELLA/.pronti/.$id.tmp" "$CARTELLA/.pronti/$id"
     echo "$(date '+%F %T') fatto: $(basename "$uscita")${audio:+ (con audio)}"
   else
     rm -f "$temp"
