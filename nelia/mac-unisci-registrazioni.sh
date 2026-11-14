@@ -122,3 +122,33 @@ for video in "$CARTELLA"/outgoing_*_display*.webm; do
     echo "$(date '+%F %T') non riuscito: $nome"
   fi
 done
+
+# Richieste con Claude (ANNULLA RICHIESTE CON CLAUDE): solo se Max, fermato il
+# REC, ha spuntato «Cerca le richieste con Claude». L'app lascia
+# .richieste/<id>.json con l'azienda e l'ora; si parte quando l'.mp4 di quella
+# registrazione e' pronto. Dopo 2 ore senza video la richiesta si toglie.
+RICHIESTE="${NELIA_RICHIESTE:-$(dirname "$0")/richieste-claude.sh}"
+for m in "$CARTELLA"/.richieste/*.json; do
+  [ -f "$m" ] || continue
+  id=$(basename "$m" .json)
+  [[ "$id" =~ ^[0-9A-Za-z_-]+$ ]] || { rm -f "$m"; continue; }
+  dati=$(python3 -I -c '
+import json, sys
+d = json.load(open(sys.argv[1]))
+a = " ".join(str(d.get("azienda", "")).split())[:200]
+print(int(d.get("fermato", 0)))
+print(a)' "$m" 2>/dev/null) || { rm -f "$m"; continue; }
+  fermato=$(echo "$dati" | sed -n 1p)
+  azienda=$(echo "$dati" | sed -n 2p)
+  pronto="$CARTELLA/.pronti/$id"
+  if [ -f "$pronto" ] && [ "$(stat -f %m "$pronto")" -ge "$fermato" ]; then
+    video=$(cat "$pronto")
+    rm -f "$m"
+    if [ -f "$video" ] && [ -n "$azienda" ]; then
+      /bin/bash "$RICHIESTE" "$video" "$azienda"
+    fi
+  elif [ $(( $(date +%s) - fermato )) -gt 7200 ]; then
+    rm -f "$m"
+    echo "$(date '+%F %T') richieste scadute (nessun video): $id"
+  fi
+done

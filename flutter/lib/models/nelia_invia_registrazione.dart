@@ -7,8 +7,14 @@
 // 3. La finestra del Trasferimento file trova .pronti/<id>.invia, lo toglie
 //    e manda l'.mp4 sulla Scrivania del cliente, in «Registrazioni lezioni».
 // Per tornare indietro: ANNULLA MANDA REGISTRAZIONE.
+//
+// Nella stessa finestra, «Cerca le richieste con Claude» lascia
+// .richieste/<id>.json (azienda e ora): l'automazione del Mac, quando l'.mp4
+// e' pronto, lo fa leggere a Claude Code e prepara la SQL per Implementazioni.
+// Per tornare indietro: ANNULLA RICHIESTE CON CLAUDE.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -34,19 +40,81 @@ Future<void> neliaDopoRec(FFI? ffi) async {
     final sessionId = ffi.sessionId;
     final fermato = DateTime.now();
 
-    final si = await ffi.dialogManager.show<bool>((setState, close, context) {
+    var manda = false;
+    var claude = false;
+    final azienda = TextEditingController(
+      text: bind.mainGetPeerOptionSync(id: id, key: 'alias'),
+    );
+    final ok = await ffi.dialogManager.show<bool>((setState, close, context) {
+      final completo = !claude || azienda.text.trim().isNotEmpty;
       return CustomAlertDialog(
-        title: const Text('Registrazione'),
-        content: const Text('Vuoi mandare la registrazione al cliente?'),
+        title: const Text('Registrazione finita'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CheckboxListTile(
+              value: manda,
+              onChanged: (v) => setState(() => manda = v == true),
+              title: const Text('Manda la registrazione al cliente'),
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+            ),
+            CheckboxListTile(
+              value: claude,
+              onChanged: (v) => setState(() => claude = v == true),
+              title: const Text('Cerca le richieste con Claude'),
+              subtitle: const Text(
+                'Ti arriva una notifica con l\'elenco e la SQL per Implementazioni.',
+              ),
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+            ),
+            if (claude)
+              TextField(
+                controller: azienda,
+                decoration: const InputDecoration(
+                  labelText: 'Azienda (il nome che ha in Nelia)',
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+          ],
+        ),
         actions: [
-          dialogButton('No', onPressed: () => close(false), isOutline: true),
-          dialogButton('Sì', onPressed: () => close(true)),
+          dialogButton(
+            'Niente',
+            onPressed: () => close(false),
+            isOutline: true,
+          ),
+          dialogButton('OK', onPressed: completo ? () => close(true) : null),
         ],
         onCancel: () => close(false),
-        onSubmit: () => close(true),
       );
     });
-    if (si != true) return;
+    final nomeAzienda = azienda.text.trim();
+    azienda.dispose();
+    if (ok != true) return;
+
+    if (claude && nomeAzienda.isNotEmpty) {
+      final cartella = Directory(
+        '${bind.mainVideoSaveDirectory(root: false)}/.richieste',
+      );
+      cartella.createSync(recursive: true);
+      final temp = File('${cartella.path}/.$id.tmp');
+      temp.writeAsStringSync(
+        jsonEncode({
+          'azienda': nomeAzienda,
+          'fermato': fermato.millisecondsSinceEpoch ~/ 1000,
+        }),
+      );
+      temp.renameSync('${cartella.path}/$id.json');
+      if (!manda) {
+        showToast(
+          'Claude cerca le richieste: ti arriva una notifica quando ha finito.',
+        );
+      }
+    }
+    if (!manda) return;
 
     var annullato = false;
     const tag = 'nelia-prepara-registrazione';
